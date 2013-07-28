@@ -12,6 +12,9 @@
 # Bob Kemp, DataKindUK data dive, 27th July 2013
 # 
 
+DATA_DIR=$PWD
+WORK_DIR=$PWD
+
 dbase() {
   psql -Upostgres ds -c "$(cat)"
 }
@@ -37,7 +40,7 @@ upload_pupil_sen_data() {
   dbase <<EOF
 
     COPY pupil_sen_data FROM 
-      '${PWD}/qryAnonymisedDataSET_LSOA.txt'
+      '${DATA_DIR}/qryAnonymisedDataSET_LSOA.txt'
       WITH CSV;
 
 EOF
@@ -112,12 +115,12 @@ EOF
 upload_pop_by_age() {
   for yr in 201{0,1,2,3,4,5,6,7,8,9}; do
 
-    sed -e 's/^/year, /' ${PWD}/pop-by-age-${yr}.csv >scratch.csv
+    sed -e 's/^/year, /' ${DATA_DIR}/pop-by-age-${yr}.csv >scratch.csv
 
     dbase <<EOF
 
       COPY pop_by_age FROM 
-	'${PWD}/scratch.csv'
+	'${DATA_DIR}/scratch.csv'
 	WITH CSV;
 
       update pop_by_age SET year = '${yr}' where year = 'year';
@@ -164,17 +167,33 @@ EOF
   done
 }
 
-create_pupil_sen_data
-upload_pupil_sen_data
+download_training_data() {
 
-aggregate_sen_data
+    ## Ensure Postgresql has write access
+    chmod o+rwx $WORK_DIR
 
-create_pop_by_age
-upload_pop_by_age
+    dbase <<EOF
+      COPY training_data TO
+	'${WORK_DIR}/training_data.csv'
+	WITH CSV HEADER;
+EOF
 
-create_training_data
-upload_training_data
+    ## Presumably "other" doesn't normally have full access
+    chmod o-rwx $WORK_DIR
+}
 
+## create_pupil_sen_data
+## upload_pupil_sen_data
+
+## aggregate_sen_data
+
+## create_pop_by_age
+## upload_pop_by_age
+
+## create_training_data
+## upload_training_data
+
+download_training_data
 
 exit
 
